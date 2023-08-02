@@ -26,9 +26,8 @@ cps <- load_basic(1980:2022, year, month, basicwgt, educ, statefips, lfstat, age
 #Data frame tabulating size of US Labor force
 us_labforce <- cps %>% 
   filter(labforce==1) %>% 
-  group_by(year) %>% 
-  #sum total labor force
-  summarize(total_labor_force = sum(basicwgt/12, na.rm=TRUE)) %>% 
+  #sum total labor force by year
+  summarize(total_labor_force = sum(basicwgt/12, na.rm=TRUE), .by=year) %>% 
   #Create a state label for a clean merge
   mutate(state='US')
 
@@ -37,10 +36,9 @@ us_educ <- cps %>%
   #keep those in labor force only
   filter(labforce==1) %>% 
   mutate(educ2 = to_factor(educ2)) %>% 
-  group_by(year, educ2) %>% 
-  summarize(attain = sum(basicwgt/12, na.rm=TRUE)) %>%
+  summarize(attain = sum(basicwgt/12, na.rm=TRUE), .by = c(year, educ2)) %>%
   #Calculate shares
-  mutate(share = attain/sum(attain)) %>% 
+  mutate(share = attain/sum(attain), .by = year) %>% 
   pivot_wider(id_cols = year, names_from = educ2, values_from = c(attain, share)) %>% 
   #Merge US labor force data frame
   left_join(us_labforce) %>% 
@@ -53,19 +51,17 @@ us_educ <- cps %>%
 
 state_labforce <- cps %>% 
   filter(labforce==1) %>% 
-  group_by(year, state) %>% 
   #sum total labor force
-  summarize(total_labor_force = sum(basicwgt/12, na.rm=TRUE))
+  summarize(total_labor_force = sum(basicwgt/12, na.rm=TRUE), .by = c(year, state))
          
 #Tabulate educational attainment of US labor force, by state
 state_educ <- cps %>% 
   #keep those in labor force only
   filter(labforce==1) %>% 
   mutate(educ2 = to_factor(educ2)) %>% 
-  group_by(year, state, educ2) %>% 
-  summarize(attain = sum(basicwgt/12, na.rm=TRUE)) %>%
+  summarize(attain = sum(basicwgt/12, na.rm=TRUE), .by=c(year, state, educ2)) %>%
   #Calculate shares
-  mutate(share = attain/sum(attain)) %>% 
+  mutate(share = attain/sum(attain), .by=c(year, state)) %>% 
   pivot_wider(id_cols = c(year, state), names_from = educ2, values_from = c(attain, share)) %>% 
   left_join(state_labforce) %>% 
   relocate(total_labor_force, .after=state) 
